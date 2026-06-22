@@ -1,0 +1,67 @@
+[
+  {
+    "name": "/visualization shows visualization buttons",
+    "steps": [
+      {
+        "send": { "text": "/visualization" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a visualization:" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "True color (RGB) button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/visualization" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a visualization:" } }
+        ]
+      },
+      {
+        "send": { "callback": "vis:true_color" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Visualization: True color (RGB)" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "False color button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/visualization" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a visualization:" } }
+        ]
+      },
+      {
+        "send": { "callback": "vis:false_color" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Visualization: False color (NIR/Red/Green)" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "NDVI button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/visualization" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a visualization:" } }
+        ]
+      },
+      {
+        "send": { "callback": "vis:ndvi" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Visualization: NDVI" } }
+        ]
+      }
+    ]
+  }
+]

@@ -1,38 +1,24 @@
 import { Composer } from "grammy";
 import type { Ctx } from "../bot.js";
-import {
-  getSharedRedisClient,
-  MemorySessionStorage,
-  RedisSessionStorage,
-} from "../toolkit/index.js";
 
 export interface UserPreferences {
   defaultVisualization?: string;
   lastPlace?: string;
 }
 
-function resolvePrefsStorage() {
-  if (process.env.REDIS_URL) {
-    const client = getSharedRedisClient(process.env.REDIS_URL);
-    return new RedisSessionStorage<UserPreferences>(client, "prefs:");
+declare module "../bot.js" {
+  interface Session {
+    prefs?: UserPreferences;
   }
-  return new MemorySessionStorage<UserPreferences>();
 }
 
-const prefsStore = resolvePrefsStorage();
-
-export async function getPrefs(userId: number): Promise<UserPreferences> {
-  return (await prefsStore.read(String(userId))) ?? {};
+function getPrefs(ctx: Ctx): UserPreferences {
+  return ctx.session.prefs ?? {};
 }
 
-export async function setPrefs(
-  userId: number,
-  prefs: UserPreferences,
-): Promise<void> {
-  await prefsStore.update(String(userId), (existing) => ({
-    ...(existing ?? {}),
-    ...prefs,
-  }));
+function setPrefs(ctx: Ctx, updates: UserPreferences): void {
+  const existing = ctx.session.prefs ?? {};
+  ctx.session.prefs = { ...existing, ...updates };
 }
 
 function formatPrefs(prefs: UserPreferences): string {
@@ -44,18 +30,15 @@ function formatPrefs(prefs: UserPreferences): string {
 const composer = new Composer<Ctx>();
 
 composer.command("getprefs", async (ctx) => {
-  const userId = ctx.from?.id;
-  if (!userId) {
+  if (!ctx.from?.id) {
     await ctx.reply("Could not identify your user account.");
     return;
   }
-  const prefs = await getPrefs(userId);
-  await ctx.reply(formatPrefs(prefs));
+  await ctx.reply(formatPrefs(getPrefs(ctx)));
 });
 
 composer.command("setprefs", async (ctx) => {
-  const userId = ctx.from?.id;
-  if (!userId) {
+  if (!ctx.from?.id) {
     await ctx.reply("Could not identify your user account.");
     return;
   }
@@ -89,8 +72,8 @@ composer.command("setprefs", async (ctx) => {
     (updates as Record<string, string>)[key] = value;
   }
 
-  await setPrefs(userId, updates);
-  await ctx.reply(formatPrefs(await getPrefs(userId)));
+  setPrefs(ctx, updates);
+  await ctx.reply(formatPrefs(getPrefs(ctx)));
 });
 
 export default composer;

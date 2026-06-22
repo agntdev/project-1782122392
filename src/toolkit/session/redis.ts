@@ -66,6 +66,28 @@ export class RedisSessionStorage<T> implements StorageAdapter<T> {
   }
 }
 
+let _sharedClient: RedisLike | null = null;
+let _sharedClientUrl: string | null = null;
+
+export function getSharedRedisClient(url: string): RedisLike {
+  if (_sharedClient && _sharedClientUrl === url) return _sharedClient;
+
+  const require = createRequire(import.meta.url);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ioredis: any = require("ioredis");
+  const Redis = ioredis.default ?? ioredis.Redis ?? ioredis;
+  const client = new Redis(url, {
+    maxRetriesPerRequest: null,
+    lazyConnect: false,
+  });
+  client.on("error", (err: unknown) => {
+    console.error("[agntdev-redis] connection error:", err);
+  });
+  _sharedClient = client as RedisLike;
+  _sharedClientUrl = url;
+  return _sharedClient;
+}
+
 /**
  * Factory that builds a RedisSessionStorage from a connection URL using a real
  * ioredis client. ioredis is loaded LAZILY (via createRequire) so a bot that
@@ -74,14 +96,8 @@ export class RedisSessionStorage<T> implements StorageAdapter<T> {
  * background and reads/writes resolve once connected.
  */
 export function defaultRedisStorage<T>(url: string): StorageAdapter<T> {
-  const require = createRequire(import.meta.url);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ioredis: any = require("ioredis");
-  const Redis = ioredis.default ?? ioredis.Redis ?? ioredis;
-  // maxRetriesPerRequest: null → commands queue while (re)connecting rather
-  // than failing fast, matching session-store expectations.
-  const client = new Redis(url, { maxRetriesPerRequest: null, lazyConnect: false });
-  return new RedisSessionStorage<T>(client as RedisLike);
+  const client = getSharedRedisClient(url);
+  return new RedisSessionStorage<T>(client);
 }
 
 /**

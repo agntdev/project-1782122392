@@ -1,10 +1,8 @@
 import { Composer } from "grammy";
 import type { Ctx } from "../bot.js";
-import { imageMetaStore, STORAGE_DIR } from "./E7T1.js";
+import { imageMetaStore, STORAGE_DIR, TTL_MS } from "./E7T1.js";
 import { unlinkSync, existsSync } from "node:fs";
 import { join } from "node:path";
-
-const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function deleteFile(hash: string, ext: string): void {
   const p = join(STORAGE_DIR, `${hash}.${ext}`);

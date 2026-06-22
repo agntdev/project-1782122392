@@ -35,8 +35,10 @@ export async function setPrefs(
   userId: number,
   prefs: UserPreferences,
 ): Promise<void> {
-  const existing = await getPrefs(userId);
-  await prefsStore.write(String(userId), { ...existing, ...prefs });
+  await prefsStore.update(String(userId), (existing) => ({
+    ...existing,
+    ...prefs,
+  }));
 }
 
 function formatPrefs(prefs: UserPreferences): string {

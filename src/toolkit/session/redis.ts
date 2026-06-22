@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import type { StorageAdapter } from "grammy";
-import { MemorySessionStorage } from "./memory.js";
+import { MemorySessionStorage, AtomicStorage } from "./memory.js";
 
 /**
  * Redis session storage for production bots (Change 3 / docs/pivot open
@@ -17,7 +17,7 @@ import { MemorySessionStorage } from "./memory.js";
  */
 export interface RedisLike {
   get(key: string): Promise<string | null>;
-  set(key: string, value: string): Promise<unknown>;
+  set(key: string, value: string, ...args: (string | number)[]): Promise<unknown>;
   del(key: string): Promise<unknown>;
   keys(pattern: string): Promise<string[]>;
 }
@@ -27,7 +27,7 @@ export interface RedisLike {
  * stored under a key prefix so a shared Redis (should one ever be used) is
  * namespaced. Async throughout — grammY's StorageAdapter accepts MaybePromise.
  */
-export class RedisSessionStorage<T> implements StorageAdapter<T> {
+export class RedisSessionStorage<T> implements AtomicStorage<T> {
   constructor(
     private readonly client: RedisLike,
     private readonly prefix = "sess:",
@@ -63,6 +63,26 @@ export class RedisSessionStorage<T> implements StorageAdapter<T> {
   async *readAllKeys(): AsyncIterableIterator<string> {
     const keys = await this.client.keys(this.prefix + "*");
     for (const k of keys) yield k.slice(this.prefix.length);
+  }
+
+  async update(key: string, fn: (current: T | undefined) => T): Promise<void> {
+    const lockKey = this.k(key) + ":lock";
+    const maxRetries = 10;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const acquired = await this.client.set(lockKey, "1", "NX", "EX", 5);
+      if (acquired) {
+        try {
+          const current = await this.read(key);
+          const next = fn(current);
+          await this.client.set(this.k(key), JSON.stringify(next));
+          return;
+        } finally {
+          await this.client.del(lockKey);
+        }
+      }
+      await new Promise((r) => setTimeout(r, 20 * (attempt + 1)));
+    }
+    throw new Error(`Failed to acquire lock for ${key} after ${maxRetries} attempts`);
   }
 }
 

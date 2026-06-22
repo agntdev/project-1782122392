@@ -1,5 +1,9 @@
 import type { StorageAdapter } from "grammy";
 
+export interface AtomicStorage<T> extends StorageAdapter<T> {
+  update(key: string, fn: (current: T | undefined) => T): void | Promise<void>;
+}
+
 /**
  * In-memory session storage — the toolkit's default persistence adapter.
  *
@@ -9,7 +13,7 @@ import type { StorageAdapter } from "grammy";
  * auto-selects it when REDIS_URL is set — falling back to this in-memory adapter
  * otherwise. Both expose the same grammY StorageAdapter interface.
  */
-export class MemorySessionStorage<T> implements StorageAdapter<T> {
+export class MemorySessionStorage<T> implements AtomicStorage<T> {
   private store = new Map<string, T>();
 
   read(key: string): T | undefined {
@@ -30,5 +34,9 @@ export class MemorySessionStorage<T> implements StorageAdapter<T> {
 
   readAllKeys(): string[] {
     return [...this.store.keys()];
+  }
+
+  update(key: string, fn: (current: T | undefined) => T): void {
+    this.store.set(key, fn(this.store.get(key)));
   }
 }

@@ -5,3 +5,4 @@ export * from "./ui/keyboard.js";
 export * from "./session/memory.js";
 export * from "./session/redis.js";
 export * from "./harness/index.js";
+export { AtomicStorage } from "./session/memory.js";

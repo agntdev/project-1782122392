@@ -30,13 +30,6 @@ async function getQueries(userId: number): Promise<RecentQueries> {
   return (await queriesStore.read(String(userId))) ?? { queries: [] };
 }
 
-async function setQueries(
-  userId: number,
-  data: RecentQueries,
-): Promise<void> {
-  await queriesStore.write(String(userId), data);
-}
-
 const MAX_QUERIES = 10;
 
 const composer = new Composer<Ctx>();
@@ -56,9 +49,11 @@ composer.command("query", async (ctx) => {
     return;
   }
   const queryText = args.join(" ");
-  const current = await getQueries(userId);
-  const updated = [queryText, ...current.queries].slice(0, MAX_QUERIES);
-  await setQueries(userId, { queries: updated });
+  await queriesStore.update(String(userId), (current) => {
+    const existing = current?.queries ?? [];
+    const updated = [queryText, ...existing].slice(0, MAX_QUERIES);
+    return { queries: updated };
+  });
   await ctx.reply(`Query saved: "${queryText}"`);
 });
 

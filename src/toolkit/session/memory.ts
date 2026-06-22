@@ -24,6 +24,13 @@ export class MemorySessionStorage<T> implements StorageAdapter<T> {
     this.store.delete(key);
   }
 
+  update(key: string, fn: (value: T | undefined) => T): T {
+    const current = this.store.get(key);
+    const next = fn(current);
+    this.store.set(key, next);
+    return next;
+  }
+
   has(key: string): boolean {
     return this.store.has(key);
   }

@@ -20,6 +20,7 @@ export interface RedisLike {
   set(key: string, value: string): Promise<unknown>;
   del(key: string): Promise<unknown>;
   keys(pattern: string): Promise<string[]>;
+  eval(script: string, numKeys: number, ...args: string[]): Promise<unknown>;
 }
 
 /**
@@ -54,6 +55,29 @@ export class RedisSessionStorage<T> implements StorageAdapter<T> {
 
   async delete(key: string): Promise<void> {
     await this.client.del(this.k(key));
+  }
+
+  async update(
+    key: string,
+    fn: (value: T | undefined) => T,
+  ): Promise<T> {
+    const fullKey = this.k(key);
+    while (true) {
+      const raw = await this.client.get(fullKey);
+      const current: T | undefined = raw ? JSON.parse(raw) as T : undefined;
+      const next = fn(current);
+      const nextRaw = JSON.stringify(next);
+      const result = await this.client.eval(
+        "local key=KEYS[1]; local expected=ARGV[1]; local newval=ARGV[2]; " +
+        "local current=redis.call('GET',key) or ''; " +
+        "if current==expected then redis.call('SET',key,newval); return 1; else return 0; end",
+        1,
+        fullKey,
+        raw ?? "",
+        nextRaw,
+      ) as number;
+      if (result === 1) return next;
+    }
   }
 
   async has(key: string): Promise<boolean> {

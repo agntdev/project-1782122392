@@ -1,0 +1,46 @@
+[
+  {
+    "name": "/storeimage with no args and no photo shows usage",
+    "steps": [
+      {
+        "send": { "text": "/storeimage" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Usage: send a photo with caption /storeimage <label>, or reply to a photo with /storeimage <label>" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/storeimage with label but no photo shows error",
+    "steps": [
+      {
+        "send": { "text": "/storeimage sunset beach" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "No photo found. Send a photo with caption /storeimage <label>, or reply to a photo with /storeimage <label>." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/imagestatus shows cache status",
+    "steps": [
+      {
+        "send": { "text": "/imagestatus" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Image cache status:\n- Stored images: 0\n- Files on disk: 0\n- Total size: 0 B" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/listimages with empty cache shows message",
+    "steps": [
+      {
+        "send": { "text": "/listimages" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "No images stored in the cache." } }
+        ]
+      }
+    ]
+  }
+]

@@ -1,6 +1,5 @@
 import { Composer } from "grammy";
 import { createRequire } from "node:module";
-import type { StorageAdapter } from "grammy";
 import type { Ctx } from "../bot.js";
 import { MemorySessionStorage, RedisSessionStorage } from "../toolkit/index.js";
 import type { RedisLike } from "../toolkit/session/redis.js";
@@ -10,7 +9,7 @@ export interface UserPreferences {
   lastPlace?: string;
 }
 
-function resolvePrefsStorage(): StorageAdapter<UserPreferences> {
+function resolvePrefsStorage() {
   if (process.env.REDIS_URL) {
     const require = createRequire(import.meta.url);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

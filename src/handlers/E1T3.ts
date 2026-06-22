@@ -4,17 +4,9 @@ import type { StorageAdapter } from "grammy";
 import type { Ctx } from "../bot.js";
 import { MemorySessionStorage, RedisSessionStorage, menuKeyboard } from "../toolkit/index.js";
 import type { RedisLike } from "../toolkit/session/redis.js";
+import { type NominatimResult, fetchGeocode, buildButtons } from "../lib/nominatim.js";
 
-const NOMINATIM_BASE = "https://nominatim.openstreetmap.org/search";
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-interface NominatimResult {
-  place_id: number;
-  osm_id: number;
-  lat: string;
-  lon: string;
-  display_name: string;
-}
 
 interface CachedGeocode {
   results: NominatimResult[];
@@ -56,11 +48,6 @@ async function setCache(place: string, results: NominatimResult[]): Promise<void
   await cacheStore.write(normalize(place), { results, cachedAt: Date.now() });
 }
 
-function truncate(name: string, max: number): string {
-  if (name.length <= max) return name;
-  return name.slice(0, max - 3) + "...";
-}
-
 const composer = new Composer<Ctx>();
 
 composer.command("geocode", async (ctx) => {
@@ -89,36 +76,14 @@ composer.on("message:text", async (ctx, next) => {
 async function geocodeAndReply(ctx: Ctx, place: string): Promise<void> {
   const cached = await getCached(place);
   if (cached) {
-    const top = cached.results.slice(0, 3);
-    const buttons = top.map((r) => ({
-      text: truncate(r.display_name, 50),
-      data: `geocode:${r.lat}:${r.lon}`,
-    }));
     await ctx.reply(`(cached) Top matches for "${place}":`, {
-      reply_markup: menuKeyboard(buttons),
+      reply_markup: menuKeyboard(buildButtons(cached.results)),
     });
     return;
   }
 
-  const url = new URL(NOMINATIM_BASE);
-  url.searchParams.set("q", place);
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "3");
-  url.searchParams.set("addressdetails", "0");
-
   try {
-    const response = await fetch(url.toString(), {
-      headers: { "User-Agent": "AGNTDEV-Bot/1.0" },
-    });
-
-    if (!response.ok) {
-      await ctx.reply(
-        `Geocoding failed: Nominatim returned status ${response.status}.`,
-      );
-      return;
-    }
-
-    const results = (await response.json()) as NominatimResult[];
+    const results = await fetchGeocode(place);
 
     if (!results || results.length === 0) {
       await ctx.reply(`No places found for "${place}".`);
@@ -127,17 +92,15 @@ async function geocodeAndReply(ctx: Ctx, place: string): Promise<void> {
 
     await setCache(place, results);
 
-    const top = results.slice(0, 3);
-    const buttons = top.map((r) => ({
-      text: truncate(r.display_name, 50),
-      data: `geocode:${r.lat}:${r.lon}`,
-    }));
-
     await ctx.reply(`Top matches for "${place}":`, {
-      reply_markup: menuKeyboard(buttons),
+      reply_markup: menuKeyboard(buildButtons(results)),
     });
-  } catch (_err) {
-    await ctx.reply("Failed to reach the geocoding service. Please try again.");
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Geocoding failed:")) {
+      await ctx.reply(err.message);
+    } else {
+      await ctx.reply("Failed to reach the geocoding service. Please try again.");
+    }
   }
 }
 

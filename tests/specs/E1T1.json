@@ -1,0 +1,30 @@
+[
+  {
+    "name": "/search prompts for place name",
+    "steps": [
+      {
+        "send": { "text": "/search" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "What place would you like to search for?" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/search stores entered place name",
+    "steps": [
+      {
+        "send": { "text": "/search" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "What place would you like to search for?" } }
+        ]
+      },
+      {
+        "send": { "text": "London" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Place saved: London" } }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,48 @@
+[
+  {
+    "name": "/status shows all parameters missing when nothing configured",
+    "steps": [
+      {
+        "send": { "text": "/status" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Status:\nLocation: Not configured — use /search\nDate range: Not configured — use /daterange\nComposite: Not configured — use /composite\nVisualization: Not configured — use /visualization\nCloud cover: Not configured — use /cloudcover\n\nMissing: /search to set your target location, /daterange to set the date range, /composite to choose a composite type, /visualization to select a visualization, /cloudcover to set cloud cover percentage. Run these commands to adjust your query." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "menu:status callback shows no data error with suggestions",
+    "steps": [
+      {
+        "send": { "callback": "menu:status" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Status:\nLocation: Not configured — use /search\nDate range: Not configured — use /daterange\nComposite: Not configured — use /composite\nVisualization: Not configured — use /visualization\nCloud cover: Not configured — use /cloudcover\n\nMissing: /search to set your target location, /daterange to set the date range, /composite to choose a composite type, /visualization to select a visualization, /cloudcover to set cloud cover percentage. Run these commands to adjust your query." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/status with place configured shows partial status with suggestions",
+    "steps": [
+      {
+        "send": { "text": "/search" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "What place would you like to search for?" } }
+        ]
+      },
+      {
+        "send": { "text": "London" },
+        "expect": [
+          { "method": "sendMessage" }
+        ]
+      },
+      {
+        "send": { "text": "/status" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Status:\nLocation: London\nDate range: Not configured — use /daterange\nComposite: Not configured — use /composite\nVisualization: Not configured — use /visualization\nCloud cover: Not configured — use /cloudcover\n\nMissing: /daterange to set the date range, /composite to choose a composite type, /visualization to select a visualization, /cloudcover to set cloud cover percentage. Run these commands to adjust your query." } }
+        ]
+      }
+    ]
+  }
+]

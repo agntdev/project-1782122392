@@ -27,9 +27,9 @@ function resolveImageMetaStorage() {
   return new MemorySessionStorage<ImageMetadata>();
 }
 
-const imageMetaStore = resolveImageMetaStorage();
+export const imageMetaStore = resolveImageMetaStorage();
 
-const STORAGE_DIR = join(
+export const STORAGE_DIR = join(
   process.env.IMAGE_STORAGE_DIR ?? "/tmp/agntdev-images",
 );
 

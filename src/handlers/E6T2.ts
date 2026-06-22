@@ -50,9 +50,10 @@ composer.command("query", async (ctx) => {
     return;
   }
   const queryText = args.join(" ");
-  const current = await getQueries(userId);
-  const updated = [queryText, ...current.queries].slice(0, MAX_QUERIES);
-  await setQueries(userId, { queries: updated });
+  await queriesStore.update(String(userId), (current) => {
+    const queries = current?.queries ?? [];
+    return { queries: [queryText, ...queries].slice(0, MAX_QUERIES) };
+  });
   await ctx.reply(`Query saved: "${queryText}"`);
 });
 

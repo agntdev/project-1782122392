@@ -1,6 +1,12 @@
 import { Composer } from "grammy";
 import { readdirSync } from "node:fs";
 import { createBot, type BotContext } from "./toolkit/index.js";
+import type { Lang } from "./handlers/E9T1.js";
+import {
+  getLang,
+  langStorage,
+  translate,
+} from "./handlers/E9T1.js";
 
 // The per-chat session shape (ephemeral conversation state only). Extend as the
 // bot grows. Durable domain data must NOT live here — use the toolkit's
@@ -30,6 +36,54 @@ export type Ctx = BotContext<Session>;
 export async function buildBot(token: string) {
   const bot = createBot<Session>(token, {
     initial: () => ({}),
+  });
+
+  // Install translation transformer globally so every handler's output is
+  // translated when the user has set a non-English language.
+  bot.api.config.use((prev, method, payload, signal) => {
+    const currentLang: Lang = langStorage.getStore() ?? "en";
+    const translatableMethods = new Set([
+      "sendMessage",
+      "editMessageText",
+      "answerCallbackQuery",
+    ]);
+
+    let updated = payload;
+    if (
+      typeof (updated as any).text === "string" &&
+      translatableMethods.has(method)
+    ) {
+      updated = {
+        ...updated,
+        text: translate((updated as any).text, currentLang),
+      };
+    }
+    if ((updated as any).reply_markup?.inline_keyboard) {
+      updated = {
+        ...updated,
+        reply_markup: {
+          inline_keyboard: (updated as any).reply_markup.inline_keyboard.map(
+            (row: any[]) =>
+              row.map((btn: any) => ({
+                ...btn,
+                text: translate(btn.text, currentLang),
+              })),
+          ),
+        },
+      };
+    }
+
+    return prev(method, updated, signal);
+  });
+
+  // Set the user's language in an AsyncLocalStorage context so the transformer
+  // above can read it. This middleware wraps the ENTIRE update pipeline (all
+  // feature composers + the fallback), guaranteeing every handler's output is
+  // translated — not just E9T1's own /lang command.
+  bot.use(async (ctx, next) => {
+    const rawLang = await getLang(ctx.from?.id ?? 0);
+    const lang: Lang = rawLang === "ru" ? "ru" : "en";
+    await langStorage.run(lang, next);
   });
 
   const dir = new URL("./handlers/", import.meta.url);

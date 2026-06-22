@@ -1,0 +1,36 @@
+[
+  {
+    "name": "/preview without place shows guidance",
+    "steps": [
+      {
+        "send": { "text": "/preview" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "No search parameters configured. Use /search first." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/preview sends photo with metadata after search",
+    "steps": [
+      {
+        "send": { "text": "/search" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "What place would you like to search for?" } }
+        ]
+      },
+      {
+        "send": { "text": "Berlin" },
+        "expect": [
+          { "method": "sendMessage" }
+        ]
+      },
+      {
+        "send": { "text": "/preview" },
+        "expect": [
+          { "method": "sendPhoto", "payload": { "caption": "Location: Berlin\nDates: Not set\nSensor: Not set\nCloud cover: Auto (20%)" } }
+        ]
+      }
+    ]
+  }
+]

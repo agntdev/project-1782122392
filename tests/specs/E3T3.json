@@ -1,0 +1,85 @@
+[
+  {
+    "name": "/cloudcover shows cloud cover buttons",
+    "steps": [
+      {
+        "send": { "text": "/cloudcover" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select cloud cover:" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Auto (20%) button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/cloudcover" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select cloud cover:" } }
+        ]
+      },
+      {
+        "send": { "callback": "cc:auto" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Cloud cover: Auto (20%)" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "10% button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/cloudcover" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select cloud cover:" } }
+        ]
+      },
+      {
+        "send": { "callback": "cc:10" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Cloud cover: 10%" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "20% button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/cloudcover" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select cloud cover:" } }
+        ]
+      },
+      {
+        "send": { "callback": "cc:20" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Cloud cover: 20%" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "40% button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/cloudcover" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select cloud cover:" } }
+        ]
+      },
+      {
+        "send": { "callback": "cc:40" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Cloud cover: 40%" } }
+        ]
+      }
+    ]
+  }
+]

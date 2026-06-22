@@ -10,7 +10,12 @@ export interface UserPreferences {
   lastPlace?: string;
 }
 
-function resolvePrefsStorage(): StorageAdapter<UserPreferences> {
+let prefsStore: StorageAdapter<UserPreferences>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let prefsRedisClient: any | null = null;
+const PREFS_PREFIX = "prefs:";
+
+function initPrefsStorage(): void {
   if (process.env.REDIS_URL) {
     const require = createRequire(import.meta.url);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -20,12 +25,13 @@ function resolvePrefsStorage(): StorageAdapter<UserPreferences> {
       maxRetriesPerRequest: null,
       lazyConnect: false,
     });
-    return new RedisSessionStorage<UserPreferences>(client as RedisLike, "prefs:");
+    prefsRedisClient = client;
+    prefsStore = new RedisSessionStorage<UserPreferences>(client as RedisLike, PREFS_PREFIX);
+  } else {
+    prefsStore = new MemorySessionStorage<UserPreferences>();
   }
-  return new MemorySessionStorage<UserPreferences>();
 }
-
-const prefsStore = resolvePrefsStorage();
+initPrefsStorage();
 
 export async function getPrefs(userId: number): Promise<UserPreferences> {
   return (await prefsStore.read(String(userId))) ?? {};
@@ -35,8 +41,21 @@ export async function setPrefs(
   userId: number,
   prefs: UserPreferences,
 ): Promise<void> {
+  const key = String(userId);
+  if (prefsRedisClient) {
+    const redisKey = PREFS_PREFIX + key;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      await prefsRedisClient.watch(redisKey);
+      const raw = await prefsRedisClient.get(redisKey);
+      const existing: UserPreferences = raw ? JSON.parse(raw) : {};
+      const merged = { ...existing, ...prefs };
+      const result = await prefsRedisClient.multi().set(redisKey, JSON.stringify(merged)).exec();
+      if (result !== null) return;
+    }
+  }
   const existing = await getPrefs(userId);
-  await prefsStore.write(String(userId), { ...existing, ...prefs });
+  await prefsStore.write(key, { ...existing, ...prefs });
 }
 
 function formatPrefs(prefs: UserPreferences): string {

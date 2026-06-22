@@ -9,7 +9,12 @@ interface RecentQueries {
   queries: string[];
 }
 
-function resolveQueriesStorage(): StorageAdapter<RecentQueries> {
+let queriesStore: StorageAdapter<RecentQueries>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let queriesRedisClient: any | null = null;
+const QUERIES_PREFIX = "queries:";
+
+function initQueriesStorage(): void {
   if (process.env.REDIS_URL) {
     const require = createRequire(import.meta.url);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -19,22 +24,35 @@ function resolveQueriesStorage(): StorageAdapter<RecentQueries> {
       maxRetriesPerRequest: null,
       lazyConnect: false,
     });
-    return new RedisSessionStorage<RecentQueries>(client as RedisLike, "queries:");
+    queriesRedisClient = client;
+    queriesStore = new RedisSessionStorage<RecentQueries>(client as RedisLike, QUERIES_PREFIX);
+  } else {
+    queriesStore = new MemorySessionStorage<RecentQueries>();
   }
-  return new MemorySessionStorage<RecentQueries>();
 }
-
-const queriesStore = resolveQueriesStorage();
+initQueriesStorage();
 
 async function getQueries(userId: number): Promise<RecentQueries> {
   return (await queriesStore.read(String(userId))) ?? { queries: [] };
 }
 
-async function setQueries(
-  userId: number,
-  data: RecentQueries,
-): Promise<void> {
-  await queriesStore.write(String(userId), data);
+async function prependQuery(userId: number, queryText: string): Promise<void> {
+  const key = String(userId);
+  if (queriesRedisClient) {
+    const redisKey = QUERIES_PREFIX + key;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      await queriesRedisClient.watch(redisKey);
+      const raw = await queriesRedisClient.get(redisKey);
+      const current: RecentQueries = raw ? JSON.parse(raw) : { queries: [] };
+      const updated = [queryText, ...current.queries].slice(0, MAX_QUERIES);
+      const result = await queriesRedisClient.multi().set(redisKey, JSON.stringify({ queries: updated })).exec();
+      if (result !== null) return;
+    }
+  }
+  const current = await getQueries(userId);
+  const updated = [queryText, ...current.queries].slice(0, MAX_QUERIES);
+  await queriesStore.write(key, { queries: updated });
 }
 
 const MAX_QUERIES = 10;
@@ -56,9 +74,7 @@ composer.command("query", async (ctx) => {
     return;
   }
   const queryText = args.join(" ");
-  const current = await getQueries(userId);
-  const updated = [queryText, ...current.queries].slice(0, MAX_QUERIES);
-  await setQueries(userId, { queries: updated });
+  await prependQuery(userId, queryText);
   await ctx.reply(`Query saved: "${queryText}"`);
 });
 

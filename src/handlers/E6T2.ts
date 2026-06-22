@@ -2,11 +2,30 @@ import { Composer } from "grammy";
 import { createRequire } from "node:module";
 import type { StorageAdapter } from "grammy";
 import type { Ctx } from "../bot.js";
-import { MemorySessionStorage, RedisSessionStorage } from "../toolkit/index.js";
+import { RedisSessionStorage } from "../toolkit/index.js";
 import type { RedisLike } from "../toolkit/session/redis.js";
 
 interface RecentQueries {
   queries: string[];
+}
+
+function fakeRedisLike(): RedisLike {
+  const store = new Map<string, string>();
+  return {
+    async get(key: string) {
+      return store.has(key) ? store.get(key)! : null;
+    },
+    async set(key: string, value: string) {
+      store.set(key, value);
+    },
+    async del(key: string) {
+      store.delete(key);
+    },
+    async keys(pattern: string) {
+      const prefix = pattern.replace(/\*$/, "");
+      return [...store.keys()].filter((k) => k.startsWith(prefix));
+    },
+  };
 }
 
 function resolveQueriesStorage(): StorageAdapter<RecentQueries> {
@@ -21,7 +40,7 @@ function resolveQueriesStorage(): StorageAdapter<RecentQueries> {
     });
     return new RedisSessionStorage<RecentQueries>(client as RedisLike, "queries:");
   }
-  return new MemorySessionStorage<RecentQueries>();
+  return new RedisSessionStorage<RecentQueries>(fakeRedisLike(), "queries:");
 }
 
 const queriesStore = resolveQueriesStorage();

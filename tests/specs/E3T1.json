@@ -1,0 +1,91 @@
+[
+  {
+    "name": "/composite shows composite type buttons",
+    "steps": [
+      {
+        "send": { "text": "/composite" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a composite type:" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Median composite button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/composite" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a composite type:" } }
+        ]
+      },
+      {
+        "send": { "callback": "comp:median" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Composite type: Median composite" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Most recent button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/composite" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a composite type:" } }
+        ]
+      },
+      {
+        "send": { "callback": "comp:most_recent" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Composite type: Most recent" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Custom button prompts for custom composite name",
+    "steps": [
+      {
+        "send": { "text": "/composite" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a composite type:" } }
+        ]
+      },
+      {
+        "send": { "callback": "comp:custom" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Enter your custom composite type:" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Custom composite input is stored and confirmed",
+    "steps": [
+      {
+        "send": { "text": "/composite" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a composite type:" } }
+        ]
+      },
+      {
+        "send": { "callback": "comp:custom" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Enter your custom composite type:" } }
+        ]
+      },
+      {
+        "send": { "text": "Exponentially weighted" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Composite type: Custom — Exponentially weighted" } }
+        ]
+      }
+    ]
+  }
+]

@@ -111,48 +111,7 @@ export function translate(text: string, lang: Lang): string {
 
 const composer = new Composer<Ctx>();
 
-const langStorage = new AsyncLocalStorage<Lang>();
-let transformerInstalled = false;
-
-composer.use(async (ctx, next) => {
-  const rawLang = await getLang(ctx.from?.id ?? 0);
-  const lang: Lang = rawLang === "ru" ? "ru" : "en";
-
-  if (!transformerInstalled) {
-    transformerInstalled = true;
-    ctx.api.config.use((prev, method, payload, signal) => {
-      const currentLang = langStorage.getStore() ?? "en";
-      const translatableMethods = new Set([
-        "sendMessage",
-        "editMessageText",
-        "answerCallbackQuery",
-      ]);
-
-      let updated = payload;
-      if (typeof (updated as any).text === "string" && translatableMethods.has(method)) {
-        updated = { ...updated, text: translate((updated as any).text, currentLang) };
-      }
-      if ((updated as any).reply_markup?.inline_keyboard) {
-        updated = {
-          ...updated,
-          reply_markup: {
-            inline_keyboard: (updated as any).reply_markup.inline_keyboard.map(
-              (row: any[]) =>
-                row.map((btn: any) => ({
-                  ...btn,
-                  text: translate(btn.text, currentLang),
-                })),
-            ),
-          },
-        };
-      }
-
-      return prev(method, updated, signal);
-    });
-  }
-
-  await langStorage.run(lang, next);
-});
+export const langStorage = new AsyncLocalStorage<Lang>();
 
 composer.command("lang", async (ctx) => {
   const userId = ctx.from?.id;

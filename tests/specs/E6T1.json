@@ -1,0 +1,74 @@
+[
+  {
+    "name": "/getprefs shows current preferences",
+    "steps": [
+      {
+        "send": { "text": "/getprefs" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Your preferences:\n- Default visualization: (not set)\n- Last place: (not set)" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/setprefs updates and shows preferences",
+    "steps": [
+      {
+        "send": { "text": "/setprefs defaultVisualization chart lastPlace London" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Your preferences:\n- Default visualization: chart\n- Last place: London" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/setprefs with no args shows usage",
+    "steps": [
+      {
+        "send": { "text": "/setprefs" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Usage: /setprefs <key> <value> [<key> <value> ...]\nKeys: defaultVisualization, lastPlace\nExample: /setprefs defaultVisualization chart lastPlace London" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/setprefs with invalid key rejects",
+    "steps": [
+      {
+        "send": { "text": "/setprefs unknownKey value" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Unknown preference key \"unknownKey\". Valid keys: defaultVisualization, lastPlace" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/setprefs with odd args rejects",
+    "steps": [
+      {
+        "send": { "text": "/setprefs defaultVisualization" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Each key must have a value. Use: /setprefs <key> <value> [<key> <value> ...]" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/setprefs partial update merges with existing prefs",
+    "steps": [
+      {
+        "send": { "text": "/setprefs defaultVisualization map" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Your preferences:\n- Default visualization: map\n- Last place: (not set)" } }
+        ]
+      },
+      {
+        "send": { "text": "/setprefs lastPlace Paris" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Your preferences:\n- Default visualization: map\n- Last place: Paris" } }
+        ]
+      }
+    ]
+  }
+]

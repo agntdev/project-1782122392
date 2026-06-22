@@ -1,0 +1,13 @@
+[
+  {
+    "name": "/t01 replies with skeleton verification",
+    "steps": [
+      {
+        "send": { "text": "/t01" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "T01: Bot skeleton verified." } }
+        ]
+      }
+    ]
+  }
+]

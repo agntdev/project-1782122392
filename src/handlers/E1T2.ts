@@ -69,4 +69,11 @@ composer.on("message:text", async (ctx, next) => {
   }
 });
 
+composer.callbackQuery(/^geocode:(-?\d+\.?\d*):(-?\d+\.?\d*)$/, async (ctx) => {
+  await ctx.answerCallbackQuery();
+  const lat = ctx.match[1];
+  const lon = ctx.match[2];
+  await ctx.reply(`Coordinates: ${lat}, ${lon}`);
+});
+
 export default composer;

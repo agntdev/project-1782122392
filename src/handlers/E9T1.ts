@@ -1,10 +1,12 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { Composer } from "grammy";
-import { createRequire } from "node:module";
 import type { StorageAdapter } from "grammy";
 import type { Ctx } from "../bot.js";
-import { MemorySessionStorage, RedisSessionStorage } from "../toolkit/index.js";
-import type { RedisLike } from "../toolkit/session/redis.js";
+import {
+  getSharedRedisClient,
+  MemorySessionStorage,
+  RedisSessionStorage,
+} from "../toolkit/index.js";
 
 export type Lang = "en" | "ru";
 
@@ -14,14 +16,8 @@ export interface UserLang {
 
 function resolveLangStorage(): StorageAdapter<UserLang> {
   if (process.env.REDIS_URL) {
-    const require = createRequire(import.meta.url);
-    const ioredis: any = require("ioredis");
-    const Redis = ioredis.default ?? ioredis.Redis ?? ioredis;
-    const client = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: null,
-      lazyConnect: false,
-    });
-    return new RedisSessionStorage<UserLang>(client as RedisLike, "lang:");
+    const client = getSharedRedisClient(process.env.REDIS_URL);
+    return new RedisSessionStorage<UserLang>(client, "lang:");
   }
   return new MemorySessionStorage<UserLang>();
 }

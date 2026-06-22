@@ -1,0 +1,36 @@
+[
+  {
+    "name": "/query with no args shows usage",
+    "steps": [
+      {
+        "send": { "text": "/query" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Usage: /query <search text>\nExample: /query weather in London" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/query saves and /recent shows queries (most recent first)",
+    "steps": [
+      {
+        "send": { "text": "/query first query" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Query saved: \"first query\"" } }
+        ]
+      },
+      {
+        "send": { "text": "/query second query" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Query saved: \"second query\"" } }
+        ]
+      },
+      {
+        "send": { "text": "/recent" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Recent queries:\n1. second query\n2. first query" } }
+        ]
+      }
+    ]
+  }
+]

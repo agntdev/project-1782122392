@@ -6,11 +6,6 @@ import { join } from "node:path";
 
 const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function extFromMime(mimeType: string): string {
-  const parts = mimeType.split("/");
-  return parts[1] ?? "jpg";
-}
-
 function deleteFile(hash: string, ext: string): void {
   const p = join(STORAGE_DIR, `${hash}.${ext}`);
   try {
@@ -39,9 +34,7 @@ composer.command("cleanupcache", async (ctx) => {
 
     const age = now - new Date(meta.storedAt).getTime();
     if (age > TTL_MS) {
-      const ext = extFromMime(meta.mimeType);
-      deleteFile(meta.id, ext);
-      if (ext === "jpeg") deleteFile(meta.id, "jpg");
+      deleteFile(meta.id, meta.ext);
 
       await imageMetaStore.delete(meta.id);
       freedBytes += meta.sizeBytes;

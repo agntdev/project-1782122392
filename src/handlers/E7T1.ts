@@ -13,6 +13,7 @@ export interface ImageMetadata {
   id: string;
   label: string;
   mimeType: string;
+  ext: string;
   sizeBytes: number;
   storedAt: string;
   width: number;
@@ -123,6 +124,7 @@ composer.command("storeimage", async (ctx) => {
       id: hash,
       label,
       mimeType: `image/${ext === "png" ? "png" : ext === "gif" ? "gif" : "jpeg"}`,
+      ext,
       sizeBytes,
       storedAt: new Date().toISOString(),
       width: largest.width ?? 0,

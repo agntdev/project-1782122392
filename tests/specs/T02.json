@@ -1,0 +1,25 @@
+[
+  {
+    "name": "/start replies with welcome and main menu",
+    "steps": [
+      {
+        "send": { "text": "/start" },
+        "expect": [
+          {
+            "method": "sendMessage",
+            "payload": {
+              "text": "Welcome! I am ready to help.",
+              "reply_markup": {
+                "inline_keyboard": [
+                  [{ "text": "Status", "callback_data": "menu:status" }],
+                  [{ "text": "Settings", "callback_data": "menu:settings" }],
+                  [{ "text": "Help", "callback_data": "menu:help" }]
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,36 @@
+[
+  {
+    "name": "/download without place shows guidance",
+    "steps": [
+      {
+        "send": { "text": "/download" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "No search parameters configured. Use /search first." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/download with place sends download button",
+    "steps": [
+      {
+        "send": { "text": "/search" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "What place would you like to search for?" } }
+        ]
+      },
+      {
+        "send": { "text": "Paris" },
+        "expect": [
+          { "method": "sendMessage" }
+        ]
+      },
+      {
+        "send": { "text": "/download" },
+        "expect": [
+          { "method": "sendMessage" }
+        ]
+      }
+    ]
+  }
+]

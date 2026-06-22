@@ -5,9 +5,16 @@ import { createBot, type BotContext } from "./toolkit/index.js";
 // The per-chat session shape (ephemeral conversation state only). Extend as the
 // bot grows. Durable domain data must NOT live here — use the toolkit's
 // persistent storage (see AGENTS.md).
+export interface DateRange {
+  type: "last_month" | "last_year" | "custom";
+  start?: string;
+  end?: string;
+}
+
 export interface Session {
-  step?: "awaiting_place" | "awaiting_geocode" | "awaiting_geocode_cached";
+  step?: "awaiting_place" | "awaiting_geocode" | "awaiting_geocode_cached" | "awaiting_custom_range";
   place?: string;
+  dateRange?: DateRange;
 }
 
 export type Ctx = BotContext<Session>;

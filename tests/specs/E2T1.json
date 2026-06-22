@@ -1,0 +1,115 @@
+[
+  {
+    "name": "/daterange shows quick date-range buttons",
+    "steps": [
+      {
+        "send": { "text": "/daterange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a date range:" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Last month button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/daterange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a date range:" } }
+        ]
+      },
+      {
+        "send": { "callback": "dr:last_month" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage" }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Last year button stores selection and confirms",
+    "steps": [
+      {
+        "send": { "text": "/daterange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a date range:" } }
+        ]
+      },
+      {
+        "send": { "callback": "dr:last_year" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage" }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Custom range button prompts for date input",
+    "steps": [
+      {
+        "send": { "text": "/daterange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a date range:" } }
+        ]
+      },
+      {
+        "send": { "callback": "dr:custom" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Enter start and end dates (YYYY-MM-DD YYYY-MM-DD):" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Valid custom date input is stored",
+    "steps": [
+      {
+        "send": { "text": "/daterange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a date range:" } }
+        ]
+      },
+      {
+        "send": { "callback": "dr:custom" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Enter start and end dates (YYYY-MM-DD YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "2024-01-01 2024-06-30" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Date range set: 2024-01-01 to 2024-06-30" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Invalid custom date format shows error",
+    "steps": [
+      {
+        "send": { "text": "/daterange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Select a date range:" } }
+        ]
+      },
+      {
+        "send": { "callback": "dr:custom" },
+        "expect": [
+          { "method": "answerCallbackQuery" },
+          { "method": "sendMessage", "payload": { "text": "Enter start and end dates (YYYY-MM-DD YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "not-a-date" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Please enter two dates separated by a space: YYYY-MM-DD YYYY-MM-DD" } }
+        ]
+      }
+    ]
+  }
+]

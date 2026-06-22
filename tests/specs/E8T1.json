@@ -1,0 +1,24 @@
+[
+  {
+    "name": "error middleware passes through to downstream command handler",
+    "steps": [
+      {
+        "send": { "text": "/help" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Available commands:\n/start - Welcome message\n/t01 - Bot skeleton verification\n/help - Show this help message" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "error middleware passes through to global fallback for unknown text",
+    "steps": [
+      {
+        "send": { "text": "qwertyuiop" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Sorry, I didn't understand that. Try /help." } }
+        ]
+      }
+    ]
+  }
+]

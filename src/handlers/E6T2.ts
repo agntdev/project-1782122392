@@ -1,45 +1,21 @@
 import { Composer } from "grammy";
-import { createRequire } from "node:module";
 import type { Ctx } from "../bot.js";
-import { RedisSessionStorage } from "../toolkit/index.js";
-import type { RedisLike } from "../toolkit/session/redis.js";
+import {
+  getSharedRedisClient,
+  MemorySessionStorage,
+  RedisSessionStorage,
+} from "../toolkit/index.js";
 
 interface RecentQueries {
   queries: string[];
 }
 
-function fakeRedisLike(): RedisLike {
-  const store = new Map<string, string>();
-  return {
-    async get(key: string) {
-      return store.has(key) ? store.get(key)! : null;
-    },
-    async set(key: string, value: string) {
-      store.set(key, value);
-    },
-    async del(key: string) {
-      store.delete(key);
-    },
-    async keys(pattern: string) {
-      const prefix = pattern.replace(/\*$/, "");
-      return [...store.keys()].filter((k) => k.startsWith(prefix));
-    },
-  };
-}
-
 function resolveQueriesStorage() {
   if (process.env.REDIS_URL) {
-    const require = createRequire(import.meta.url);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ioredis: any = require("ioredis");
-    const Redis = ioredis.default ?? ioredis.Redis ?? ioredis;
-    const client = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: null,
-      lazyConnect: false,
-    });
-    return new RedisSessionStorage<RecentQueries>(client as RedisLike, "queries:");
+    const client = getSharedRedisClient(process.env.REDIS_URL);
+    return new RedisSessionStorage<RecentQueries>(client, "queries:");
   }
-  return new RedisSessionStorage<RecentQueries>(fakeRedisLike(), "queries:");
+  return new MemorySessionStorage<RecentQueries>();
 }
 
 const queriesStore = resolveQueriesStorage();

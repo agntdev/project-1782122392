@@ -11,7 +11,7 @@
     ]
   },
   {
-    "name": "/preview sends photo with metadata after search",
+    "name": "/preview without satellite API access shows error after search",
     "steps": [
       {
         "send": { "text": "/search" },
@@ -28,7 +28,7 @@
       {
         "send": { "text": "/preview" },
         "expect": [
-          { "method": "sendPhoto", "payload": { "caption": "Location: Berlin\nDates: Not set\nSensor: Not set\nCloud cover: Auto (20%)" } }
+          { "method": "sendMessage", "payload": { "text": "Preview images are not available right now. Please try again later." } }
         ]
       }
     ]

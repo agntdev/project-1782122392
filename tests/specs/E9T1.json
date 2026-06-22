@@ -1,0 +1,75 @@
+[
+  {
+    "name": "/lang shows default language (English)",
+    "steps": [
+      {
+        "send": { "text": "/lang" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Current language: English. Use /lang <ru|en> to switch." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/lang ru switches to Russian",
+    "steps": [
+      {
+        "send": { "text": "/lang ru" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Язык изменён на Русский." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/lang en switches to English",
+    "steps": [
+      {
+        "send": { "text": "/lang en" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Language set to English." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/lang full cycle: default → ru → check → en",
+    "steps": [
+      {
+        "send": { "text": "/lang" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Current language: English. Use /lang <ru|en> to switch." } }
+        ]
+      },
+      {
+        "send": { "text": "/lang ru" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Язык изменён на Русский." } }
+        ]
+      },
+      {
+        "send": { "text": "/lang" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Текущий язык: Русский. Используйте /lang <ru|en> для переключения." } }
+        ]
+      },
+      {
+        "send": { "text": "/lang en" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Language set to English." } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "/lang with unknown language code shows error",
+    "steps": [
+      {
+        "send": { "text": "/lang fr" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Unknown language. Available: en, ru" } }
+        ]
+      }
+    ]
+  }
+]

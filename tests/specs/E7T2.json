@@ -1,0 +1,13 @@
+[
+  {
+    "name": "/cleanupcache with empty cache shows zero cleaned",
+    "steps": [
+      {
+        "send": { "text": "/cleanupcache" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Cache cleanup complete. Removed 0 expired image(s), freed 0 B." } }
+        ]
+      }
+    ]
+  }
+]

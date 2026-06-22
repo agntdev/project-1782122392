@@ -12,7 +12,7 @@ export interface DateRange {
 }
 
 export interface Session {
-  step?: "awaiting_place" | "awaiting_geocode" | "awaiting_geocode_cached" | "awaiting_custom_range" | "awaiting_composite_custom";
+  step?: "awaiting_place" | "awaiting_geocode" | "awaiting_geocode_cached" | "awaiting_composite_custom";
   place?: string;
   dateRange?: DateRange;
   compositeType?: "median" | "most_recent" | "custom";

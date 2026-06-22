@@ -22,10 +22,17 @@ function formatDate(d: Date): string {
 function computeRange(type: "last_month" | "last_year"): { start: string; end: string } {
   const end = new Date();
   const start = new Date(end);
+  const origDay = start.getDate();
   if (type === "last_month") {
     start.setMonth(start.getMonth() - 1);
+    if (start.getDate() !== origDay) {
+      start.setDate(0);
+    }
   } else {
     start.setFullYear(start.getFullYear() - 1);
+    if (start.getDate() !== origDay) {
+      start.setDate(0);
+    }
   }
   return { start: formatDate(start), end: formatDate(end) };
 }

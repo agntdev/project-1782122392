@@ -1,0 +1,133 @@
+[
+  {
+    "name": "/customrange prompts for start date",
+    "steps": [
+      {
+        "send": { "text": "/customrange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the start date (YYYY-MM-DD):" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Valid start date prompts for end date",
+    "steps": [
+      {
+        "send": { "text": "/customrange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the start date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "2024-01-01" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the end date (YYYY-MM-DD):" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Full custom range flow succeeds",
+    "steps": [
+      {
+        "send": { "text": "/customrange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the start date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "2024-01-01" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the end date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "2024-06-30" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Date range set: 2024-01-01 to 2024-06-30" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Invalid start date shows error",
+    "steps": [
+      {
+        "send": { "text": "/customrange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the start date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "not-a-date" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Invalid date. Enter the start date as YYYY-MM-DD (e.g. 2024-01-15):" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Invalid end date shows error",
+    "steps": [
+      {
+        "send": { "text": "/customrange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the start date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "2024-01-01" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the end date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "bad-date" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Invalid date. Enter the end date as YYYY-MM-DD (e.g. 2024-06-30):" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "End date before start date shows error",
+    "steps": [
+      {
+        "send": { "text": "/customrange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the start date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "2024-06-30" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the end date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "2024-01-01" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "End date must be on or after the start date. Please enter a valid end date:" } }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Invalid calendar date is rejected",
+    "steps": [
+      {
+        "send": { "text": "/customrange" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Enter the start date (YYYY-MM-DD):" } }
+        ]
+      },
+      {
+        "send": { "text": "2024-02-30" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "Invalid date. Enter the start date as YYYY-MM-DD (e.g. 2024-01-15):" } }
+        ]
+      }
+    ]
+  }
+]

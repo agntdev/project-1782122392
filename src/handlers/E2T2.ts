@@ -41,16 +41,21 @@ composer.on("message:text", async (ctx, next) => {
   }
 
   if (step === "awaiting_end") {
+    const start = ctx.session.dateRange?.start;
+    if (!start) {
+      ctx.session.customDateStep = undefined;
+      await ctx.reply("Session expired. Please use /customrange to start over.");
+      return;
+    }
     if (!isValidDate(text)) {
       await ctx.reply("Invalid date. Enter the end date as YYYY-MM-DD (e.g. 2024-06-30):");
       return;
     }
-    const start = ctx.session.dateRange?.start;
-    if (start && text < start) {
+    if (text < start) {
       await ctx.reply("End date must be on or after the start date. Please enter a valid end date:");
       return;
     }
-    ctx.session.dateRange = { type: "custom", start: start!, end: text };
+    ctx.session.dateRange = { type: "custom", start, end: text };
     ctx.session.customDateStep = undefined;
     await ctx.reply(`Date range set: ${start} to ${text}`);
     return;

@@ -1,0 +1,13 @@
+[
+  {
+    "name": "/whereis prompts for place name",
+    "steps": [
+      {
+        "send": { "text": "/whereis" },
+        "expect": [
+          { "method": "sendMessage", "payload": { "text": "What place would you like to geocode?" } }
+        ]
+      }
+    ]
+  }
+]

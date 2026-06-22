@@ -1,6 +1,5 @@
 import { Composer } from "grammy";
 import { createRequire } from "node:module";
-import type { StorageAdapter } from "grammy";
 import type { Ctx } from "../bot.js";
 import { RedisSessionStorage } from "../toolkit/index.js";
 import type { RedisLike } from "../toolkit/session/redis.js";
@@ -28,7 +27,7 @@ function fakeRedisLike(): RedisLike {
   };
 }
 
-function resolveQueriesStorage(): StorageAdapter<RecentQueries> {
+function resolveQueriesStorage(): RedisSessionStorage<RecentQueries> {
   if (process.env.REDIS_URL) {
     const require = createRequire(import.meta.url);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,13 +46,6 @@ const queriesStore = resolveQueriesStorage();
 
 async function getQueries(userId: number): Promise<RecentQueries> {
   return (await queriesStore.read(String(userId))) ?? { queries: [] };
-}
-
-async function setQueries(
-  userId: number,
-  data: RecentQueries,
-): Promise<void> {
-  await queriesStore.write(String(userId), data);
 }
 
 const MAX_QUERIES = 10;
@@ -75,9 +67,10 @@ composer.command("query", async (ctx) => {
     return;
   }
   const queryText = args.join(" ");
-  const current = await getQueries(userId);
-  const updated = [queryText, ...current.queries].slice(0, MAX_QUERIES);
-  await setQueries(userId, { queries: updated });
+  await queriesStore.update(String(userId), (current) => {
+    const queries = (current ?? { queries: [] }).queries;
+    return { queries: [queryText, ...queries].slice(0, MAX_QUERIES) };
+  });
   await ctx.reply(`Query saved: "${queryText}"`);
 });
 

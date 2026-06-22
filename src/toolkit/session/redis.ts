@@ -64,6 +64,13 @@ export class RedisSessionStorage<T> implements StorageAdapter<T> {
     const keys = await this.client.keys(this.prefix + "*");
     for (const k of keys) yield k.slice(this.prefix.length);
   }
+
+  async update(key: string, transform: (value: T | undefined) => T): Promise<T> {
+    const existing = await this.read(key);
+    const updated = transform(existing);
+    await this.write(key, updated);
+    return updated;
+  }
 }
 
 /**

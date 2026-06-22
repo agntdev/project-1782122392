@@ -1,6 +1,5 @@
 import { Composer } from "grammy";
 import { createRequire } from "node:module";
-import type { StorageAdapter } from "grammy";
 import type { Ctx } from "../bot.js";
 import { MemorySessionStorage, RedisSessionStorage } from "../toolkit/index.js";
 import type { RedisLike } from "../toolkit/session/redis.js";
@@ -10,7 +9,9 @@ export interface UserPreferences {
   lastPlace?: string;
 }
 
-function resolvePrefsStorage(): StorageAdapter<UserPreferences> {
+type PrefsStore = MemorySessionStorage<UserPreferences> | RedisSessionStorage<UserPreferences>;
+
+function resolvePrefsStorage(): PrefsStore {
   if (process.env.REDIS_URL) {
     const require = createRequire(import.meta.url);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,8 +36,7 @@ export async function setPrefs(
   userId: number,
   prefs: UserPreferences,
 ): Promise<void> {
-  const existing = await getPrefs(userId);
-  await prefsStore.write(String(userId), { ...existing, ...prefs });
+  await prefsStore.update(String(userId), (existing) => ({ ...existing, ...prefs }));
 }
 
 function formatPrefs(prefs: UserPreferences): string {

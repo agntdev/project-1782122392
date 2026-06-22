@@ -31,4 +31,11 @@ export class MemorySessionStorage<T> implements StorageAdapter<T> {
   readAllKeys(): string[] {
     return [...this.store.keys()];
   }
+
+  async update(key: string, transform: (value: T | undefined) => T): Promise<T> {
+    const existing = this.store.get(key);
+    const updated = transform(existing);
+    this.store.set(key, updated);
+    return updated;
+  }
 }

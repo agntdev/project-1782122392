@@ -1,99 +1,176 @@
 import { Composer, InputFile } from "grammy";
 import type { Ctx } from "../bot.js";
-import zlib from "node:zlib";
+import { fetchGeocode } from "../lib/nominatim.js";
 
-const CRC32_TABLE = new Uint32Array(256);
-for (let i = 0; i < 256; i++) {
-  let c = i;
-  for (let j = 0; j < 8; j++) {
-    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+const SENTINEL_HUB_TOKEN_URL = "https://services.sentinel-hub.com/oauth/token";
+const SENTINEL_HUB_WMS_BASE = "https://services.sentinel-hub.com/ogc/wms";
+
+interface TokenCache {
+  access_token: string;
+  expires_at: number;
+}
+
+let tokenCache: TokenCache | null = null;
+
+async function getSentinelHubToken(
+  clientId: string,
+  clientSecret: string,
+): Promise<string> {
+  if (tokenCache && tokenCache.expires_at > Date.now() + 60_000) {
+    return tokenCache.access_token;
   }
-  CRC32_TABLE[i] = c;
-}
 
-function crc32(data: Buffer): number {
-  let crc = 0xffffffff;
-  for (const byte of data) {
-    crc = CRC32_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  const response = await fetch(SENTINEL_HUB_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: clientId,
+      client_secret: clientSecret,
+    }).toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Sentinel Hub authentication failed (status ${response.status}).`,
+    );
   }
-  return (crc ^ 0xffffffff) >>> 0;
+
+  const data = (await response.json()) as {
+    access_token: string;
+    expires_in: number;
+  };
+
+  tokenCache = {
+    access_token: data.access_token,
+    expires_at: Date.now() + data.expires_in * 1000,
+  };
+
+  return tokenCache.access_token;
 }
 
-function pngChunk(type: string, data: Buffer): Buffer {
-  const typeBuf = Buffer.from(type, "ascii");
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length, 0);
-  const crcInput = Buffer.concat([typeBuf, data]);
-  const crcVal = Buffer.alloc(4);
-  crcVal.writeUInt32BE(crc32(crcInput), 0);
-  return Buffer.concat([len, typeBuf, data, crcVal]);
-}
-
-function generatePreviewPng(
-  width: number,
-  height: number,
-  placeHash: number,
-  sensorHash: number,
-  cloudHash: number,
-): Buffer {
-  const colorType = 2;
-  const bytesPerPixel = 3;
-
-  const rows: Buffer[] = [];
-  for (let y = 0; y < height; y++) {
-    const row = Buffer.alloc(width * bytesPerPixel);
-    for (let x = 0; x < width; x++) {
-      const idx = x * bytesPerPixel;
-
-      const r = Math.floor(
-        30 + ((x + placeHash) % 37) * 1.3 + ((y + sensorHash) % 53) * 0.8,
-      ) % 256;
-      const g = Math.floor(
-        60 + ((y + cloudHash) % 67) * 1.1 + ((x + placeHash) % 43) * 0.6,
-      ) % 256;
-      const b = Math.floor(
-        40 + ((x + y + sensorHash) % 91) * 0.9 + ((cloudHash) % 59) * 0.5,
-      ) % 256;
-
-      row[idx] = Math.min(255, Math.max(0, r));
-      row[idx + 1] = Math.min(255, Math.max(0, g));
-      row[idx + 2] = Math.min(255, Math.max(0, b));
+function resolveWmsLayer(
+  compositeType?: string,
+  compositeCustomName?: string,
+  visOption?: string,
+): string {
+  if (visOption === "ndvi") return "NDVI-S2L2A";
+  if (visOption === "false_color") return "FALSE-COLOR-URBAN-S2L2A";
+  if (compositeType === "custom" && compositeCustomName) {
+    const upper = compositeCustomName.toUpperCase();
+    if (
+      upper.includes("NDVI") ||
+      upper.includes("VEGETATION") ||
+      upper.includes("VEG")
+    ) {
+      return "NDVI-S2L2A";
     }
-    rows.push(Buffer.concat([Buffer.from([0]), row]));
+    if (
+      upper.includes("FALSE") ||
+      upper.includes("URBAN") ||
+      upper.includes("NIR")
+    ) {
+      return "FALSE-COLOR-URBAN-S2L2A";
+    }
   }
-
-  const uncompressed = Buffer.concat(rows);
-  const compressed = zlib.deflateSync(uncompressed);
-
-  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;
-  ihdr[9] = colorType;
-  ihdr[10] = 0;
-  ihdr[11] = 0;
-  ihdr[12] = 0;
-
-  return Buffer.concat([
-    signature,
-    pngChunk("IHDR", ihdr),
-    pngChunk("IDAT", compressed),
-    pngChunk("IEND", Buffer.alloc(0)),
-  ]);
+  return "TRUE-COLOR-S2L2A";
 }
 
-function hashString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  }
-  return h;
+function resolveMaxCC(cloudCover?: string): number {
+  if (cloudCover === "10") return 10;
+  if (cloudCover === "20") return 20;
+  if (cloudCover === "40") return 40;
+  return 20;
 }
 
-const MAX_DIM = 1024;
-const DEFAULT_SIZE = 512;
+function resolveTimeRange(
+  dateRange?: Ctx["session"]["dateRange"],
+): string {
+  const now = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+  if (dateRange?.start && dateRange?.end) {
+    return `${dateRange.start}/${dateRange.end}`;
+  }
+  if (dateRange?.type === "last_month") {
+    const from = new Date(now);
+    from.setMonth(from.getMonth() - 1);
+    return `${fmt(from)}/${fmt(now)}`;
+  }
+  if (dateRange?.type === "last_year") {
+    const from = new Date(now);
+    from.setFullYear(from.getFullYear() - 1);
+    return `${fmt(from)}/${fmt(now)}`;
+  }
+  const from = new Date(now);
+  from.setMonth(from.getMonth() - 3);
+  return `${fmt(from)}/${fmt(now)}`;
+}
+
+async function fetchPreviewPng(params: {
+  instanceId: string;
+  clientId: string;
+  clientSecret: string;
+  place: string;
+  compositeType?: string;
+  compositeCustomName?: string;
+  visOption?: string;
+  cloudCover?: string;
+  dateRange?: Ctx["session"]["dateRange"];
+}): Promise<Buffer> {
+  const results = await fetchGeocode(params.place);
+  if (!results || results.length === 0) {
+    throw new Error(`Could not find coordinates for "${params.place}".`);
+  }
+
+  const lat = parseFloat(results[0].lat);
+  const lon = parseFloat(results[0].lon);
+  const bboxSize = 0.05;
+  const bbox = `${lon - bboxSize},${lat - bboxSize},${lon + bboxSize},${lat + bboxSize}`;
+
+  const token = await getSentinelHubToken(
+    params.clientId,
+    params.clientSecret,
+  );
+
+  const layer = resolveWmsLayer(
+    params.compositeType,
+    params.compositeCustomName,
+    params.visOption,
+  );
+  const maxcc = resolveMaxCC(params.cloudCover);
+  const timeRange = resolveTimeRange(params.dateRange);
+
+  const url = new URL(`${SENTINEL_HUB_WMS_BASE}/${params.instanceId}`);
+  url.searchParams.set("SERVICE", "WMS");
+  url.searchParams.set("REQUEST", "GetMap");
+  url.searchParams.set("LAYERS", layer);
+  url.searchParams.set("CRS", "EPSG:4326");
+  url.searchParams.set("BBOX", bbox);
+  url.searchParams.set("WIDTH", "512");
+  url.searchParams.set("HEIGHT", "512");
+  url.searchParams.set("FORMAT", "image/png");
+  url.searchParams.set("TIME", timeRange);
+  url.searchParams.set("MAXCC", String(maxcc));
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Sentinel Hub WMS request failed (status ${response.status}).`,
+    );
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("xml") || contentType.includes("text")) {
+    const body = await response.text();
+    throw new Error(`Sentinel Hub returned an error: ${body.slice(0, 200)}`);
+  }
+
+  return Buffer.from(await response.arrayBuffer());
+}
 
 const composer = new Composer<Ctx>();
 
@@ -103,6 +180,15 @@ composer.command("preview", async (ctx) => {
     await ctx.reply(
       "No search parameters configured. Use /search first.",
     );
+    return;
+  }
+
+  const clientId = process.env.SENTINEL_HUB_CLIENT_ID;
+  const clientSecret = process.env.SENTINEL_HUB_CLIENT_SECRET;
+  const instanceId = process.env.SENTINEL_HUB_INSTANCE_ID;
+
+  if (!clientId || !clientSecret || !instanceId) {
+    await ctx.reply("Preview is not available right now.");
     return;
   }
 
@@ -132,20 +218,28 @@ composer.command("preview", async (ctx) => {
             ? "40%"
             : "Auto (20%)";
 
-  const size = Math.min(MAX_DIM, DEFAULT_SIZE);
-  const png = generatePreviewPng(
-    size,
-    size,
-    hashString(place),
-    hashString(compositeLabel),
-    hashString(cloudStr),
-  );
-
   const caption = `Location: ${place}\nDates: ${datesStr}\nSensor: ${compositeLabel}\nCloud cover: ${cloudStr}`;
 
-  await ctx.replyWithPhoto(new InputFile(png, "preview.png"), {
-    caption,
-  });
+  try {
+    const png = await fetchPreviewPng({
+      instanceId,
+      clientId,
+      clientSecret,
+      place,
+      compositeType: ctx.session.compositeType,
+      compositeCustomName: ctx.session.compositeCustomName,
+      visOption: ctx.session.visOption,
+      cloudCover: ctx.session.cloudCover,
+      dateRange: ctx.session.dateRange,
+    });
+
+    await ctx.replyWithPhoto(new InputFile(png, "preview.png"), {
+      caption,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error.";
+    await ctx.reply(`Could not fetch preview: ${message}`);
+  }
 });
 
 export default composer;

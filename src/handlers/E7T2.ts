@@ -1,10 +1,8 @@
 import { Composer } from "grammy";
 import type { Ctx } from "../bot.js";
-import { imageMetaStore, STORAGE_DIR } from "./E7T1.js";
+import { imageMetaStore, STORAGE_DIR, isStale } from "./E7T1.js";
 import { unlinkSync, existsSync } from "node:fs";
 import { join } from "node:path";
-
-const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 function extFromMime(mimeType: string): string {
   const parts = mimeType.split("/");
@@ -37,8 +35,7 @@ composer.command("cleanupcache", async (ctx) => {
     const meta = await imageMetaStore.read(key);
     if (!meta) continue;
 
-    const age = now - new Date(meta.storedAt).getTime();
-    if (age > TTL_MS) {
+    if (isStale(meta, now)) {
       const ext = extFromMime(meta.mimeType);
       deleteFile(meta.id, ext);
       if (ext === "jpeg") deleteFile(meta.id, "jpg");

@@ -6,7 +6,7 @@ import {
   RedisSessionStorage,
 } from "../toolkit/index.js";
 import { createHash } from "node:crypto";
-import { mkdirSync, writeFileSync, statSync, readdirSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, statSync, readdirSync, existsSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 export interface ImageMetadata {
@@ -33,6 +33,27 @@ export const STORAGE_DIR = join(
   process.env.IMAGE_STORAGE_DIR ?? "/tmp/agntdev-images",
 );
 
+export const TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+function extFromMime(mimeType: string): string {
+  const parts = mimeType.split("/");
+  return parts[1] ?? "jpg";
+}
+
+function deleteFile(hash: string, ext: string): void {
+  const p = join(STORAGE_DIR, `${hash}.${ext}`);
+  try {
+    if (existsSync(p)) unlinkSync(p);
+  } catch {
+    // file already gone
+  }
+}
+
+export function isStale(meta: ImageMetadata, now?: number): boolean {
+  const age = (now ?? Date.now()) - new Date(meta.storedAt).getTime();
+  return age > TTL_MS;
+}
+
 function ensureStorageDir(): void {
   if (!existsSync(STORAGE_DIR)) {
     mkdirSync(STORAGE_DIR, { recursive: true });
@@ -44,14 +65,32 @@ async function storeImageMeta(meta: ImageMetadata): Promise<void> {
 }
 
 async function getImageMeta(id: string): Promise<ImageMetadata | undefined> {
-  return imageMetaStore.read(id);
+  const meta = await imageMetaStore.read(id);
+  if (!meta) return undefined;
+  if (isStale(meta)) {
+    const ext = extFromMime(meta.mimeType);
+    deleteFile(meta.id, ext);
+    if (ext === "jpeg") deleteFile(meta.id, "jpg");
+    await imageMetaStore.delete(meta.id);
+    return undefined;
+  }
+  return meta;
 }
 
 async function listAllImageMeta(): Promise<ImageMetadata[]> {
+  const now = Date.now();
   const metas: ImageMetadata[] = [];
   for await (const key of imageMetaStore.readAllKeys()) {
     const meta = await imageMetaStore.read(key);
-    if (meta) metas.push(meta);
+    if (!meta) continue;
+    if (isStale(meta, now)) {
+      const ext = extFromMime(meta.mimeType);
+      deleteFile(meta.id, ext);
+      if (ext === "jpeg") deleteFile(meta.id, "jpg");
+      await imageMetaStore.delete(meta.id);
+      continue;
+    }
+    metas.push(meta);
   }
   metas.sort(
     (a, b) => new Date(b.storedAt).getTime() - new Date(a.storedAt).getTime(),
